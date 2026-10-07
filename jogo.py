@@ -90,12 +90,10 @@ class Inimigo(pygame.sprite.Sprite):
     self.rect = self.image.get_rect()
     self.rect.x = random.randint(0, LARGURA - self.rect.width)
     self.rect.y = random.randint(-100, -40)
-    # Velocidade base + um bônus que aumenta com o tempo/pontos
     self.velocidade = random.randint(2, 4) + velocidade_extra
 
   def update(self):
     self.rect.y += self.velocidade
-    # Se passar da tela, o inimigo se destrói sozinho para não acumular
     if self.rect.top > ALTURA:
       self.kill()
 
@@ -109,15 +107,15 @@ tiros = pygame.sprite.Group()
 jogador = Jogador()
 todos_sprites.add(jogador)
 
-# Variáveis do Jogo e Sistema de Spawn (Tempo)
+# Variáveis do Jogo e Placares
 pontos = 0
-tempo_sobrevivencia = 0
+recorde = 0  # Armazena a maior pontuação da sessão atual
 rodando = True
 game_over = False
 
-# Evento customizado para criar inimigos periodicamente no Pygame
+# Evento customizado para criar inimigos periodicamente
 ADICIONAR_INIMIGO = pygame.USEREVENT + 1
-TEMPO_SPAWN_INICIAL = 1500  # Começa gerando um inimigo a cada 1.5 segundo (1500ms)
+TEMPO_SPAWN_INICIAL = 1500
 pygame.time.set_timer(ADICIONAR_INIMIGO, TEMPO_SPAWN_INICIAL)
 
 # Loop Principal do Jogo
@@ -137,7 +135,6 @@ while rodando:
         # Reiniciar o jogo
         game_over = False
         pontos = 0
-        tempo_sobrevivencia = 0
         jogador.vidas = 3
         jogador.rect.centerx = LARGURA // 2
         jogador.rect.bottom = ALTURA - 20
@@ -150,12 +147,9 @@ while rodando:
         pygame.time.set_timer(ADICIONAR_INIMIGO, 1500)
 
     elif evento.type == ADICIONAR_INIMIGO and not game_over:
-      # Quanto mais pontos você faz, mais rápido os inimigos aparecem (o intervalo diminui)
-      # Limite mínimo de 300ms para o jogo não ficar impossível de processar
       novo_intervalo = max(300, 1500 - (pontos * 15))
       pygame.time.set_timer(ADICIONAR_INIMIGO, int(novo_intervalo))
 
-      # Aumenta um pouco a velocidade dos inimigos conforme a pontuação avança
       bonus_vel = pontos // 50
       inimigo = Inimigo(velocidade_extra=bonus_vel)
       todos_sprites.add(inimigo)
@@ -180,15 +174,22 @@ while rodando:
       if jogador.vidas <= 0:
         game_over = True
         pygame.time.set_timer(ADICIONAR_INIMIGO, 0)  # Para de criar inimigos
+        # Atualiza o recorde se a pontuação atual for maior
+        if pontos > recorde:
+          recorde = pontos
 
   # Renderização
   TELA.fill(PRETO)
   todos_sprites.draw(TELA)
 
-  texto_pontos = FONTE.render(f"Pontuação: {pontos}", True, BRANCO)
+  # Textos do HUD (Pontuação, Recorde e Vidas)
+  texto_pontos = FONTE.render(f"Pontos: {pontos}", True, BRANCO)
+  texto_recorde = FONTE.render(f"Recorde: {recorde}", True, AMARELO)
   texto_vidas = FONTE.render(f"Vidas: {jogador.vidas}", True, VERDE)
+
   TELA.blit(texto_pontos, (15, 15))
-  TELA.blit(texto_vidas, (15, 45))
+  TELA.blit(texto_recorde, (15, 45))
+  TELA.blit(texto_vidas, (15, 75))
 
   if game_over:
     superficie_fim = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
@@ -196,17 +197,32 @@ while rodando:
     TELA.blit(superficie_fim, (0, 0))
 
     msg_game_over = FONTE_FIM.render("FIM DE JOGO", True, VERMELHO)
+    msg_pontos_finais = FONTE.render(
+        f"Sua Pontuação: {pontos}", True, BRANCO
+    )
+    msg_recorde_tela = FONTE.render(
+        f"Maior Pontuação: {recorde}", True, AMARELO
+    )
     msg_reiniciar = FONTE.render(
         "Pressione 'R' para Reiniciar ou ESC para sair", True, BRANCO
     )
 
+    # Exibindo elementos centralizados na tela de Game Over
     TELA.blit(
         msg_game_over,
-        (LARGURA // 2 - msg_game_over.get_width() // 2, ALTURA // 2 - 50),
+        (LARGURA // 2 - msg_game_over.get_width() // 2, ALTURA // 2 - 90),
+    )
+    TELA.blit(
+        msg_pontos_finais,
+        (LARGURA // 2 - msg_pontos_finais.get_width() // 2, ALTURA // 2 - 30),
+    )
+    TELA.blit(
+        msg_recorde_tela,
+        (LARGURA // 2 - msg_recorde_tela.get_width() // 2, ALTURA // 2 + 10),
     )
     TELA.blit(
         msg_reiniciar,
-        (LARGURA // 2 - msg_reiniciar.get_width() // 2, ALTURA // 2 + 20),
+        (LARGURA // 2 - msg_reiniciar.get_width() // 2, ALTURA // 2 + 70),
     )
 
     teclas = pygame.key.get_pressed()
